@@ -1,0 +1,31 @@
+{
+  "name": "heartsensorlibrary",
+  "version": "1.0.0",
+  "description": "NodeJS native bindings to HeartSensorLibrary",
+  "main": "index.js",
+  "gypfile": true,
+  "scripts": {
+    "build": "cmake-js compile",
+    "test": "mocha --reporter spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brendanwalker/node-HeartSensorLibrary.git"
+  },
+  "keywords": [
+    "heartsensorlibrary",
+    "polar",
+    "bluetoothle"
+  ],
+  "author": "Brendan Walker",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/brendanwalker/node-HeartSensorLibrary/issues"
+  },
+  "homepage": "https://github.com/brendanwalker/node-HeartSensorLibrary#readme",
+  "devDependencies": {},
+  "dependencies": {
+    "cmake-js": "^6.1.0",
+    "node-addon-api": "^3.1.0"
+  }
+}
