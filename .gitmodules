@@ -1,0 +1,3 @@
+[submodule "deps/HeartSensorLibrary"]
+	path = deps/HeartSensorLibrary
+	url = https://github.com/brendanwalker/HeartSensorLibrary.git
