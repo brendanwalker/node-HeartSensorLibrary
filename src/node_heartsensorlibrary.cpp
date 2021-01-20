@@ -15,9 +15,8 @@
  */
  
 #include "node_heartsensorlibrary.h"
-//TODO
-//#include "HSLClient_CAPI.h"
-//#include "ClientConstants.h"
+#include "HSLClient_CAPI.h"
+#include "ClientConstants.h"
 
 Napi::Object nodehsl::Init(Napi::Env env, Napi::Object exports)
 {
