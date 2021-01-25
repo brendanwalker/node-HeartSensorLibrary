@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.17)
+
 # Name of the project (will be the name of the plugin)
 project (heartsensorlibrary)
 
@@ -37,4 +39,5 @@ string(REPLACE "\n" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
 string(REPLACE "\"" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
 target_include_directories(${PROJECT_NAME} PRIVATE ${NODE_ADDON_API_DIR})
 
-add_definitions(-DNAPI_VERSION=3)
+# This define insures that the C preprocessor value NAPI_VERSION is communicated to the module's C/C++ code.
+add_definitions(-DNAPI_VERSION=6)
