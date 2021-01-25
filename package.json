@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "NodeJS native bindings to HeartSensorLibrary",
   "main": "index.js",
-  "gypfile": true,
   "scripts": {
     "build": "cmake-js compile",
     "test": "mocha --reporter spec"
