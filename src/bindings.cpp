@@ -46,29 +46,14 @@
   }                                                                     \
   VAR = info[I].ToBoolean();
 
-Napi::Value Initialize(const Napi::CallbackInfo &info)
-{
-	return Napi::Boolean::New(info.Env(), HSL_Initialize(HSLLogSeverityLevel::HSLLogSeverityLevel_error));
-}
-
 Napi::Value Update(const Napi::CallbackInfo& info)
 {
 	return Napi::Boolean::New(info.Env(), HSL_Update());
 }
 
-Napi::Value Shutdown(const Napi::CallbackInfo& info)
-{
-	return Napi::Boolean::New(info.Env(), HSL_Shutdown());
-}
-
 Napi::Value UpdateNoPollEvents(const Napi::CallbackInfo& info)
 {
 	return Napi::Boolean::New(info.Env(), HSL_UpdateNoPollEvents());
-}
-
-Napi::Value GetIsInitialized(const Napi::CallbackInfo& info)
-{
-	return Napi::Boolean::New(info.Env(), HSL_GetIsInitialized());
 }
 
 Napi::Value HasSensorListChanged(const Napi::CallbackInfo& info)
@@ -92,7 +77,7 @@ public:
 	BufferIterator(const Napi::CallbackInfo& info)
 		: Napi::ObjectWrap<BufferIterator>(info)
 	{
-		if (info.Length() > 1 && info[0].IsExternal())
+		if (info.Length() >= 1 && info[0].IsExternal())
 		{
 			Napi::External<HSLBufferIterator> inBufferIter = info[0].As<Napi::External<HSLBufferIterator>>();
 
@@ -107,13 +92,7 @@ public:
 	// Create a new item using the constructor stored during Init.
 	static Napi::Value CreateNewIterator(const Napi::CallbackInfo& info, HSLBufferIterator &iter)
 	{
-		// Retrieve the instance data we stored during `Init()`. We only stored the
-		// constructor there, so we retrieve it here to create a new instance of the
-		// JS class the constructor represents.
-		Napi::Env env = info.Env();
-		Napi::FunctionReference* constructor = env.GetInstanceData<Napi::FunctionReference>();
-
-		return constructor->New({Napi::External<HSLBufferIterator>::New(info.Env(), &iter)});
+		return constructor.New({Napi::External<HSLBufferIterator>::New(info.Env(), &iter)});
 	}
 
 	Napi::Value IsValid(const Napi::CallbackInfo& info)
@@ -294,69 +273,40 @@ public:
 		return obj;
 	}
 
-	static Napi::Object Init(Napi::Env env, Napi::Object exports)
+	static void Init(Napi::Env env, Napi::Object exports)
 	{
 		Napi::HandleScope scope(env);
 
-		/**
-		* HSLSensorBufferType
-		*/
-		Napi::PropertyDescriptor BufferType_HRData =
-			Napi::PropertyDescriptor::Value("BufferType_HRData", Napi::Number::New(env, HSLBufferType_HRData));
-		Napi::PropertyDescriptor BufferType_ECGData =
-			Napi::PropertyDescriptor::Value("BufferType_ECGData", Napi::Number::New(env, HSLBufferType_ECGData));
-		Napi::PropertyDescriptor BufferType_PPGData =
-			Napi::PropertyDescriptor::Value("BufferType_PPGData", Napi::Number::New(env, HSLBufferType_PPGData));
-		Napi::PropertyDescriptor BufferType_PPIData =
-			Napi::PropertyDescriptor::Value("BufferType_PPIData", Napi::Number::New(env, HSLBufferType_PPIData));
-		Napi::PropertyDescriptor BufferType_AccData =
-			Napi::PropertyDescriptor::Value("BufferType_AccData", Napi::Number::New(env, HSLBufferType_AccData));
-		Napi::PropertyDescriptor BufferType_HRVData =
-			Napi::PropertyDescriptor::Value("BufferType_HRVData", Napi::Number::New(env, HSLBufferType_HRVData));
-		exports.DefineProperties({
-			BufferType_HRData,
-			BufferType_ECGData,
-			BufferType_PPGData,
-			BufferType_PPIData,
-			BufferType_AccData,
-			BufferType_HRVData
+		Napi::Function ctor = DefineClass(env, "BufferIterator", {
+			InstanceMethod("isValid", &BufferIterator::IsValid),
+			InstanceMethod("next", &BufferIterator::Next),
+			InstanceMethod("getDataType", &BufferIterator::GetDataType),
+			InstanceMethod("getHRData", &BufferIterator::GetHRData),
+			InstanceMethod("getECGData", &BufferIterator::GetECGData),
+			InstanceMethod("getPPGData", &BufferIterator::GetPPGData),
+			InstanceMethod("getPPIData", &BufferIterator::GetPPIData),
+			InstanceMethod("getAccData", &BufferIterator::GetAccData),
+			InstanceMethod("getHrvData", &BufferIterator::GetHrvData),
+			// HSLContactSensorStatus
+			StaticValue("BufferType_HRData", Napi::Number::New(env, HSLBufferType_HRData)),
+			StaticValue("BufferType_ECGData", Napi::Number::New(env, HSLBufferType_ECGData)),
+			StaticValue("BufferType_PPGData", Napi::Number::New(env, HSLBufferType_PPGData)),
+			StaticValue("BufferType_PPIData", Napi::Number::New(env, HSLBufferType_PPIData)),
+			StaticValue("BufferType_AccData", Napi::Number::New(env, HSLBufferType_AccData)),
+			StaticValue("BufferType_HRVData", Napi::Number::New(env, HSLBufferType_HRVData)),
 		});
 
-		Napi::Function func = DefineClass(env, "BufferIterator", {
-			InstanceMethod<&BufferIterator::IsValid>("isValid"),
-			InstanceMethod<&BufferIterator::Next>("next"),
-			InstanceMethod<&BufferIterator::GetDataType>("getDataType"),
-			InstanceMethod<&BufferIterator::GetHRData>("getHRData"),
-			InstanceMethod<&BufferIterator::GetECGData>("getECGData"),
-			InstanceMethod<&BufferIterator::GetPPGData>("getPPGData"),
-			InstanceMethod<&BufferIterator::GetPPIData>("getPPIData"),
-			InstanceMethod<&BufferIterator::GetAccData>("getAccData"),
-			InstanceMethod<&BufferIterator::GetHrvData>("getHrvData")
-		});
-
-		// Create a persistent reference to the class constructor. This will allow
-		// a function called on a class prototype and a function
-		// called on instance of a class to be distinguished from each other.
-		Napi::FunctionReference* constructor = new Napi::FunctionReference();
-		*constructor = Napi::Persistent(func);
-		exports.Set("BufferIterator", func);
-
-		// Store the constructor as the add-on instance data. This will allow this
-		// add-on to support multiple instances of itself running on multiple worker
-		// threads, as well as multiple instances of itself running in different
-		// contexts on the same thread.
-		//
-		// By default, the value set on the environment here will be destroyed when
-		// the add-on is unloaded using the `delete` operator, but it is also
-		// possible to supply a custom deleter.
-		env.SetInstanceData<Napi::FunctionReference>(constructor);
-
-		return exports;
+		constructor = Napi::Persistent(ctor);
+		constructor.SuppressDestruct();
+		exports.Set("BufferIterator", ctor);
 	}
 
 private:
+	static Napi::FunctionReference constructor;
+
 	HSLBufferIterator m_iterator;
 };
+Napi::FunctionReference BufferIterator::constructor;
 
 class Sensor : public Napi::ObjectWrap<Sensor>
 {
@@ -364,9 +314,9 @@ public:
 	Sensor(const Napi::CallbackInfo& info)
 		: Napi::ObjectWrap<Sensor>(info)
 	{
-		if (info.Length() > 1 && info[0].IsExternal())
+		if (info.Length() >= 1 && info[0].IsExternal())
 		{
-			m_sensorExternalPtr = info[0].As<Napi::External<HSLSensor>>();
+			m_sensor = info[0].As<Napi::External<HSLSensor>>().Data();
 		}
 		else
 		{
@@ -381,14 +331,13 @@ public:
 		// constructor there, so we retrieve it here to create a new instance of the
 		// JS class the constructor represents.
 		Napi::Env env = info.Env();
-		Napi::FunctionReference* constructor = env.GetInstanceData<Napi::FunctionReference>();
 
 		// Fetch the sensor pointer by sensor id
 		HSLSensor* sensor = HSL_GetSensor(sensor_id);
 
 		return 
 			(sensor != nullptr)
-			? constructor->New({Napi::External<HSLSensor>::New(env, sensor)})
+			? constructor.New({Napi::External<HSLSensor>::New(env, sensor)})
 			: env.Null();
 	}
 
@@ -591,125 +540,68 @@ public:
 		return Napi::Boolean::New(info.Env(), HSL_StopAllSensorStreams(sensor_id));
 	}
 
-	static Napi::Object Init(Napi::Env env, Napi::Object exports)
+	static void Init(Napi::Env env, Napi::Object exports)
 	{
 		Napi::HandleScope scope(env);
 
-		/**
-		* HSLContactSensorStatus
-		*/
-		Napi::PropertyDescriptor ContactStatus_Invalid = 
-			Napi::PropertyDescriptor::Value("ContactStatus_Invalid", Napi::Number::New(env, HSLContactStatus_Invalid));
-		Napi::PropertyDescriptor ContactStatus_NoContact =
-			Napi::PropertyDescriptor::Value("ContactStatus_NoContact", Napi::Number::New(env, HSLContactStatus_NoContact));
-		Napi::PropertyDescriptor ContactStatus_Contact =
-			Napi::PropertyDescriptor::Value("ContactStatus_Contact", Napi::Number::New(env, HSLContactStatus_Contact));
-		exports.DefineProperties({
-			ContactStatus_Invalid,
-			ContactStatus_NoContact,
-			ContactStatus_Contact
+		Napi::Function ctor = DefineClass(env, "Sensor", {			
+			InstanceMethod("getSensorID", &Sensor::GetSensorID),
+			InstanceMethod("getDeviceBodyLocation", &Sensor::GetDeviceBodyLocation),
+			InstanceMethod("hasCapability", &Sensor::HasCapability),
+			InstanceMethod("getDeviceFriendlyName", &Sensor::GetDeviceFriendlyName),
+			InstanceMethod("getDevicePath", &Sensor::GetDevicePath),
+			InstanceMethod("getFirmwareRevisionString", &Sensor::GetFirmwareRevisionString),
+			InstanceMethod("getHardwareRevisionString", &Sensor::GetHardwareRevisionString),
+			InstanceMethod("getManufacturerNameString", &Sensor::GetManufacturerNameString),
+			InstanceMethod("getSerialNumberString", &Sensor::GetSerialNumberString),
+			InstanceMethod("getSoftwareRevisionString", &Sensor::GetSoftwareRevisionString),
+			InstanceMethod("getSystemIdString", &Sensor::GetSystemIdString),
+			InstanceMethod("getHeartRateBPM", &Sensor::GetHeartRateBPM),
+			InstanceMethod("getHeartRateBuffer", &Sensor::GetHeartRateBuffer),
+			InstanceMethod("getHeartECGBuffer", &Sensor::GetHeartECGBuffer),
+			InstanceMethod("getHeartPPGBuffer", &Sensor::GetHeartPPGBuffer),
+			InstanceMethod("getHeartPPIBuffer", &Sensor::GetHeartPPIBuffer),
+			InstanceMethod("getHeartAccBuffer", &Sensor::GetHeartAccBuffer),
+			InstanceMethod("getHeartHrvBuffer", &Sensor::GetHeartHrvBuffer),
+			InstanceMethod("setDataStreamActive", &Sensor::SetDataStreamActive),
+			InstanceMethod("setFilterStreamActive", &Sensor::SetFilterStreamActive),
+			InstanceMethod("stopAllStreams", &Sensor::StopAllStreams),
+			// HSLContactSensorStatus
+			StaticValue("ContactStatus_Invalid", Napi::Number::New(env, HSLContactStatus_Invalid)),
+			StaticValue("ContactStatus_NoContact", Napi::Number::New(env, HSLContactStatus_NoContact)),
+			StaticValue("ContactStatus_Contact", Napi::Number::New(env, HSLContactStatus_Contact)),
+			// HSLSensorDataStreamFlags
+			StaticValue("StreamFlags_HRData", Napi::Number::New(env, HSLStreamFlags_HRData)),
+			StaticValue("StreamFlags_ECGData", Napi::Number::New(env, HSLStreamFlags_ECGData)),
+			StaticValue("StreamFlags_PPGData", Napi::Number::New(env, HSLStreamFlags_PPGData)),
+			StaticValue("StreamFlags_PPIData", Napi::Number::New(env, HSLStreamFlags_PPIData)),
+			StaticValue("StreamFlags_AccData", Napi::Number::New(env, HSLStreamFlags_AccData)),
+			// HSLHeartRateVariabityFilterType
+			StaticValue("HRVFilter_SDNN", Napi::Number::New(env, HRVFilter_SDNN)),
+			StaticValue("HRVFilter_RMSSD", Napi::Number::New(env, HRVFilter_RMSSD)),
+			StaticValue("HRVFilter_SDSD", Napi::Number::New(env, HRVFilter_SDSD)),
+			StaticValue("HRVFilter_NN50", Napi::Number::New(env, HRVFilter_NN50)),
+			StaticValue("HRVFilter_pNN50", Napi::Number::New(env, HRVFilter_pNN50)),
+			StaticValue("HRVFilter_NN20", Napi::Number::New(env, HRVFilter_NN20)),
+			StaticValue("HRVFilter_pNN20", Napi::Number::New(env, HRVFilter_pNN20)),
 		});
 
-		/**
-		* HSLSensorDataStreamFlags
-		*/
-		Napi::PropertyDescriptor StreamFlags_HRData =
-			Napi::PropertyDescriptor::Value("StreamFlags_HRData", Napi::Number::New(env, HSLStreamFlags_HRData));
-		Napi::PropertyDescriptor StreamFlags_ECGData =
-			Napi::PropertyDescriptor::Value("StreamFlags_ECGData", Napi::Number::New(env, HSLStreamFlags_ECGData));
-		Napi::PropertyDescriptor StreamFlags_PPGData =
-			Napi::PropertyDescriptor::Value("StreamFlags_PPGData", Napi::Number::New(env, HSLStreamFlags_PPGData));
-		Napi::PropertyDescriptor StreamFlags_PPIData =
-			Napi::PropertyDescriptor::Value("StreamFlags_PPIData", Napi::Number::New(env, HSLStreamFlags_PPIData));
-		Napi::PropertyDescriptor StreamFlags_AccData =
-			Napi::PropertyDescriptor::Value("StreamFlags_AccData", Napi::Number::New(env, HSLStreamFlags_AccData));
-		exports.DefineProperties({
-			StreamFlags_HRData,
-			StreamFlags_ECGData,
-			StreamFlags_PPGData,
-			StreamFlags_PPIData,
-			StreamFlags_AccData
-		});
-
-		/**
-		 * HSLHeartRateVariabityFilterType
-		 */
-		Napi::PropertyDescriptor HRVFilterType_SDNN =
-			Napi::PropertyDescriptor::Value("HRVFilter_SDNN", Napi::Number::New(env, HRVFilter_SDNN));
-		Napi::PropertyDescriptor HRVFilterType_RMSSD =
-			Napi::PropertyDescriptor::Value("HRVFilter_RMSSD", Napi::Number::New(env, HRVFilter_RMSSD));
-		Napi::PropertyDescriptor HRVFilterType_SDSD =
-			Napi::PropertyDescriptor::Value("HRVFilter_SDSD", Napi::Number::New(env, HRVFilter_SDSD));
-		Napi::PropertyDescriptor HRVFilterType_NN50 =
-			Napi::PropertyDescriptor::Value("HRVFilter_NN50", Napi::Number::New(env, HRVFilter_NN50));
-		Napi::PropertyDescriptor HRVFilterType_pNN50 =
-			Napi::PropertyDescriptor::Value("HRVFilter_pNN50", Napi::Number::New(env, HRVFilter_pNN50));
-		Napi::PropertyDescriptor HRVFilterType_NN20 =
-			Napi::PropertyDescriptor::Value("HRVFilter_NN20", Napi::Number::New(env, HRVFilter_NN20));
-		Napi::PropertyDescriptor HRVFilterType_pNN20 =
-			Napi::PropertyDescriptor::Value("HRVFilter_pNN20", Napi::Number::New(env, HRVFilter_pNN20));
-		exports.DefineProperties({
-			HRVFilterType_SDNN,
-			HRVFilterType_RMSSD,
-			HRVFilterType_SDSD,
-			HRVFilterType_NN50,
-			HRVFilterType_pNN50,
-			HRVFilterType_NN20,
-			HRVFilterType_pNN20
-		});
-
-		Napi::Function func = DefineClass(env, "Sensor", {			
-			InstanceMethod<&Sensor::GetSensorID>("getSensorID"),
-			InstanceMethod<&Sensor::GetDeviceBodyLocation>("getDeviceBodyLocation"),
-			InstanceMethod<&Sensor::HasCapability>("hasCapability"),
-			InstanceMethod<&Sensor::GetDeviceFriendlyName>("getDeviceFriendlyName"),
-			InstanceMethod<&Sensor::GetDevicePath>("getDevicePath"),
-			InstanceMethod<&Sensor::GetFirmwareRevisionString>("getFirmwareRevisionString"),
-			InstanceMethod<&Sensor::GetHardwareRevisionString>("getHardwareRevisionString"),
-			InstanceMethod<&Sensor::GetManufacturerNameString>("getManufacturerNameString"),
-			InstanceMethod<&Sensor::GetSerialNumberString>("getSerialNumberString"),
-			InstanceMethod<&Sensor::GetSoftwareRevisionString>("getSoftwareRevisionString"),
-			InstanceMethod<&Sensor::GetSystemIdString>("getSystemIdString"),
-			InstanceMethod<&Sensor::GetHeartRateBPM>("getHeartRateBPM"),
-			InstanceMethod<&Sensor::GetHeartRateBuffer>("getHeartRateBuffer"),
-			InstanceMethod<&Sensor::GetHeartECGBuffer>("getHeartECGBuffer"),
-			InstanceMethod<&Sensor::GetHeartPPGBuffer>("getHeartPPGBuffer"),
-			InstanceMethod<&Sensor::GetHeartPPIBuffer>("getHeartPPIBuffer"),
-			InstanceMethod<&Sensor::GetHeartAccBuffer>("getHeartAccBuffer"),
-			InstanceMethod<&Sensor::GetHeartHrvBuffer>("getHeartHrvBuffer"),
-			InstanceMethod<&Sensor::SetDataStreamActive>("setDataStreamActive"),
-			InstanceMethod<&Sensor::SetFilterStreamActive>("setFilterStreamActive"),
-			InstanceMethod<&Sensor::StopAllStreams>("stopAllStreams")
-		});
-
-		// Create a persistent reference to the class constructor. This will allow
-		// a function called on a class prototype and a function
-		// called on instance of a class to be distinguished from each other.
-		Napi::FunctionReference* constructor = new Napi::FunctionReference();
-		*constructor = Napi::Persistent(func);
-		exports.Set("Sensor", func);
-
-		// Store the constructor as the add-on instance data. This will allow this
-		// add-on to support multiple instances of itself running on multiple worker
-		// threads, as well as multiple instances of itself running in different
-		// contexts on the same thread.
-		//
-		// By default, the value set on the environment here will be destroyed when
-		// the add-on is unloaded using the `delete` operator, but it is also
-		// possible to supply a custom deleter.
-		env.SetInstanceData<Napi::FunctionReference>(constructor);
-
-		return exports;
+		constructor = Napi::Persistent(ctor);
+		constructor.SuppressDestruct();
+		exports.Set("Sensor", ctor);
 	}
 
 private:
+	static Napi::FunctionReference constructor;
+
 	HSLSensor* GetSensor() const
 	{
-		return m_sensorExternalPtr.Data();
+		return m_sensor;
 	}
 
-	Napi::External<HSLSensor> m_sensorExternalPtr;
+	HSLSensor* m_sensor;
 };
+Napi::FunctionReference Sensor::constructor;
 
 class SensorList : public Napi::ObjectWrap<SensorList>
 {
@@ -723,13 +615,7 @@ public:
 	// Create a new item using the constructor stored during Init.
 	static Napi::Object CreateNewSensorList(const Napi::CallbackInfo& info)
 	{
-		// Retrieve the instance data we stored during `Init()`. We only stored the
-		// constructor there, so we retrieve it here to create a new instance of the
-		// JS class the constructor represents.
-		Napi::Env env = info.Env();
-		Napi::FunctionReference* constructor = env.GetInstanceData<Napi::FunctionReference>();
-
-		return constructor->New({});
+		return constructor.New({});
 	}
 
 	Napi::Value GetHostSerial(const Napi::CallbackInfo& info)
@@ -759,39 +645,27 @@ public:
 		}
 	}
 
-	static Napi::Object Init(Napi::Env env, Napi::Object exports)
+	static void Init(Napi::Env env, Napi::Object exports)
 	{
 		Napi::HandleScope scope(env);
 
-		Napi::Function func = DefineClass(env, "SensorList", {
-			InstanceMethod<&SensorList::GetHostSerial>("getHostSerial"),
-			InstanceMethod<&SensorList::GetSensorCount>("getSensorCount"),
-			InstanceMethod<&SensorList::GetSensor>("getSensor"),
+		Napi::Function ctor = DefineClass(env, "SensorList", {
+			InstanceMethod("getHostSerial", &SensorList::GetHostSerial),
+			InstanceMethod("getSensorCount", &SensorList::GetSensorCount),
+			InstanceMethod("getSensor", &SensorList::GetSensor),
 		});
 
-		// Create a persistent reference to the class constructor. This will allow
-		// a function called on a class prototype and a function
-		// called on instance of a class to be distinguished from each other.
-		Napi::FunctionReference* constructor = new Napi::FunctionReference();
-		*constructor = Napi::Persistent(func);
-		exports.Set("SensorList", func);
-
-		// Store the constructor as the add-on instance data. This will allow this
-		// add-on to support multiple instances of itself running on multiple worker
-		// threads, as well as multiple instances of itself running in different
-		// contexts on the same thread.
-		//
-		// By default, the value set on the environment here will be destroyed when
-		// the add-on is unloaded using the `delete` operator, but it is also
-		// possible to supply a custom deleter.
-		env.SetInstanceData<Napi::FunctionReference>(constructor);
-
-		return exports;
+		constructor = Napi::Persistent(ctor);
+		constructor.SuppressDestruct();
+		exports.Set("SensorList", ctor);
 	}
 
 private:
+	static Napi::FunctionReference constructor;
+
 	HSLSensorList m_sensorList;
 };
+Napi::FunctionReference SensorList::constructor;
 
 Napi::Object GetSensorList(const Napi::CallbackInfo& info)
 {
@@ -804,7 +678,7 @@ public:
 	EventMessage(const Napi::CallbackInfo& info)
 		: Napi::ObjectWrap<EventMessage>(info)
 	{
-		if (info.Length() > 1 && info[0].IsExternal())
+		if (info.Length() >= 1 && info[0].IsExternal())
 		{
 			Napi::External<HSLEventMessage> inEventMessage = info[0].As<Napi::External<HSLEventMessage>>();
 
@@ -819,13 +693,7 @@ public:
 	// Create a new item using the constructor stored during Init.
 	static Napi::Object CreateNewEventMessage(const Napi::CallbackInfo& info, HSLEventMessage &event_message)
 	{
-		// Retrieve the instance data we stored during `Init()`. We only stored the
-		// constructor there, so we retrieve it here to create a new instance of the
-		// JS class the constructor represents.
-		Napi::Env env = info.Env();
-		Napi::FunctionReference* constructor = env.GetInstanceData<Napi::FunctionReference>();
-
-		return constructor->New({Napi::External<HSLEventMessage>::New(info.Env(), &event_message)});
+		return constructor.New({Napi::External<HSLEventMessage>::New(info.Env(), &event_message)});
 	}
 
 	Napi::Value GetEventType(const Napi::CallbackInfo& info)
@@ -833,7 +701,7 @@ public:
 		return Napi::Number::New(info.Env(), m_eventMessage.event_type);
 	}
 
-	static Napi::Object Init(Napi::Env env, Napi::Object exports)
+	static void Init(Napi::Env env, Napi::Object exports)
 	{
 		Napi::HandleScope scope(env);
 
@@ -846,33 +714,24 @@ public:
 			Event_SensorListUpdated
 		});
 
-		Napi::Function func = DefineClass(env, "EventMessage", {
-			InstanceMethod<&EventMessage::GetEventType>("getEventType"),
+		Napi::Function ctor = DefineClass(env, "EventMessage", {
+			InstanceMethod("getEventType", &EventMessage::GetEventType),
 		});
 
 		// Create a persistent reference to the class constructor. This will allow
 		// a function called on a class prototype and a function
 		// called on instance of a class to be distinguished from each other.
-		Napi::FunctionReference* constructor = new Napi::FunctionReference();
-		*constructor = Napi::Persistent(func);
-		exports.Set("EventMessage", func);
-
-		// Store the constructor as the add-on instance data. This will allow this
-		// add-on to support multiple instances of itself running on multiple worker
-		// threads, as well as multiple instances of itself running in different
-		// contexts on the same thread.
-		//
-		// By default, the value set on the environment here will be destroyed when
-		// the add-on is unloaded using the `delete` operator, but it is also
-		// possible to supply a custom deleter.
-		env.SetInstanceData<Napi::FunctionReference>(constructor);
-
-		return exports;
+		constructor = Napi::Persistent(ctor);
+		constructor.SuppressDestruct();
+		exports.Set("EventMessage", ctor);
 	}
 
 private:
+	static Napi::FunctionReference constructor;
+
 	HSLEventMessage m_eventMessage;
 };
+Napi::FunctionReference EventMessage::constructor;
 
 Napi::Value PollNextMessage(const Napi::CallbackInfo& info)
 {
@@ -889,20 +748,30 @@ Napi::Value PollNextMessage(const Napi::CallbackInfo& info)
 	}
 }
 
+void Cleanup(void* arg)
+{
+	HSL_Shutdown();
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
-	exports.Set("initialize", Napi::Function::New(env, Initialize));
-	exports.Set("update", Napi::Function::New(env, Update));
-	exports.Set("shutdown", Napi::Function::New(env, Shutdown));
-
 	exports.Set("getVersionString", Napi::Function::New(env, GetVersionString));
-	exports.Set("getIsInitialized", Napi::Function::New(env, GetIsInitialized));
 
+	exports.Set("update", Napi::Function::New(env, Update));
 	exports.Set("updateNoPollEvents", Napi::Function::New(env, UpdateNoPollEvents));
 	exports.Set("pollNextMessage", Napi::Function::New(env, PollNextMessage));
 
 	exports.Set("hasSensorListChanged", Napi::Function::New(env, HasSensorListChanged));
 	exports.Set("getSensorList", Napi::Function::New(env, GetSensorList));
+
+	BufferIterator::Init(env, exports);
+	EventMessage::Init(env, exports);
+	Sensor::Init(env, exports);
+	SensorList::Init(env, exports);
+
+	HSL_Initialize(HSLLogSeverityLevel::HSLLogSeverityLevel_error);
+
+	napi_add_env_cleanup_hook(env, &Cleanup, nullptr);
 
 	return exports;
 }
