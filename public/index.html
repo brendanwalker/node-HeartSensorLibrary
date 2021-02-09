@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script type="text/javascript">
+
+    var ppgDataSet = [];
+
+    function handleJSONString(jsonString) {
+      var chart = document.getElementById("chart");
+
+      const jsonData = JSON.parse(jsonString);
+      const sensorID = jsonData['id'];
+      const sensorType = jsonData['type'];
+      const sensorStreamData = jsonData['stream']
+
+      if (sensorType == 'ppg') {
+
+        sensorStreamData.forEach(function (streamData) {
+          const ppgSamples = streamData['ppgSamples'];
+          var sampleMillis = streamData['timeInSeconds'] * 1000.0;
+
+          ppgSamples.forEach(function (ppgSample) {
+            //const ambient = ppgSample['ambient'];
+            const ppgValue0 = ppgSample['ppgValue0'];
+            //const ppgValue1 = ppgSample['ppgValue1'];
+            //const ppgValue2 = ppgSample['ppgValue2'];
+
+            // Add to the data set, remove from the left if it gets wider than the canvas
+            ppgDataSet.push(ppgValue0);
+            if (ppgDataSet.length > (chart.width - 1)) {
+              ppgDataSet.shift();
+            }
+          });
+        });
+
+        redrawDataSet();
+      }
+    }
+
+    function redrawDataSet() {
+      var canvas = document.getElementById("chart");
+      var ctx = canvas.getContext("2d");
+
+      // Erase
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw samples
+      ctx.fillStyle = "#000000";
+
+      var minValue = 0;
+      var maxValue = 100;
+      for (var i = 0; i < ppgDataSet.length; i++) {
+        minValue = Math.min(minValue, ppgDataSet[i]);
+        maxValue = Math.max(maxValue, ppgDataSet[i]);
+      }
+
+      for (var i = 0; i < ppgDataSet.length; i++) {
+        var value = ppgDataSet[i];
+        var x = canvas.width - i - 1;
+        var y = canvas.height * (1.0 - (value - minValue) / (maxValue - minValue));
+
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      // Run this once after the DOM is loaded
+      if (!!window.EventSource) {
+        var source = new EventSource('data');
+        source.addEventListener('message', function (e) {
+          handleJSONString(e.data)
+        }, false);
+      }
+      else {
+        console.log('Server-Stream-Event not supported');
+      }
+    }, false);
+  </script>
+</head>
+
+<body>
+  <canvas id="chart" width="300" height="800"></canvas>
+</body>
+
+</html>

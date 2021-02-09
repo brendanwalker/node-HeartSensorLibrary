@@ -4,7 +4,7 @@
   "description": "NodeJS native bindings to HeartSensorLibrary",
   "main": "index.js",
   "scripts": {
-    "build": "cmake-js compile",
+    "build": "cmake-js compile --debug",
     "test": "mocha --reporter spec"
   },
   "repository": {
@@ -25,6 +25,11 @@
   "devDependencies": {},
   "dependencies": {
     "cmake-js": "^6.1.0",
-    "node-addon-api": "^3.1.0"
+    "fs": "0.0.1-security",
+    "http": "0.0.1-security",
+    "http-shutdown": "^1.2.2",
+    "node-addon-api": "^3.1.0",
+    "path": "^0.12.7",
+    "url": "^0.11.0"
   }
 }
