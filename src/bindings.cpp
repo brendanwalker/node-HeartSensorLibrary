@@ -469,6 +469,57 @@ public:
 		return BufferIterator::CreateNewIterator(info, iter);
 	}
 
+	Napi::Value FlushHeartRateBuffer(const Napi::CallbackInfo& info)
+	{
+		HSLSensorID sensor_id = GetSensor()->sensorID;
+		bool bSuccess= HSL_FlushHeartRateBuffer(sensor_id);
+
+		return Napi::Boolean::New(info.Env(), bSuccess);
+	}
+
+	Napi::Value FlushHeartECGBuffer(const Napi::CallbackInfo& info)
+	{
+		HSLSensorID sensor_id = GetSensor()->sensorID;
+		bool bSuccess= HSL_FlushHeartECGBuffer(sensor_id);
+
+		return Napi::Boolean::New(info.Env(), bSuccess);
+	}
+
+	Napi::Value FlushHeartPPGBuffer(const Napi::CallbackInfo& info)
+	{
+		HSLSensorID sensor_id = GetSensor()->sensorID;
+		bool bSuccess= HSL_FlushHeartPPGBuffer(sensor_id);
+
+		return Napi::Boolean::New(info.Env(), bSuccess);
+	}
+
+	Napi::Value FlushHeartPPIBuffer(const Napi::CallbackInfo& info)
+	{
+		HSLSensorID sensor_id = GetSensor()->sensorID;
+		bool bSuccess= HSL_FlushHeartPPIBuffer(sensor_id);
+
+		return Napi::Boolean::New(info.Env(), bSuccess);
+	}
+
+	Napi::Value FlushHeartAccBuffer(const Napi::CallbackInfo& info)
+	{
+		HSLSensorID sensor_id = GetSensor()->sensorID;
+		bool bSuccess= HSL_FlushHeartAccBuffer(sensor_id);
+
+		return Napi::Boolean::New(info.Env(), bSuccess);
+	}
+
+	Napi::Value FlushtHeartHrvBuffer(const Napi::CallbackInfo& info)
+	{
+		REQ_ARGS(1);
+		REQ_INT_ARG(0, filter_type);
+
+		HSLSensorID sensor_id = GetSensor()->sensorID;
+		bool bSuccess= HSL_FlushHeartHrvBuffer(sensor_id, (HSLHeartRateVariabityFilterType)filter_type);
+
+		return Napi::Boolean::New(info.Env(), bSuccess);
+	}
+
 	Napi::Value SetDataStreamActive(const Napi::CallbackInfo& info)
 	{
 		REQ_ARGS(2);
@@ -563,6 +614,12 @@ public:
 			InstanceMethod("getHeartPPIBuffer", &Sensor::GetHeartPPIBuffer),
 			InstanceMethod("getHeartAccBuffer", &Sensor::GetHeartAccBuffer),
 			InstanceMethod("getHeartHrvBuffer", &Sensor::GetHeartHrvBuffer),
+			InstanceMethod("flushHeartRateBuffer", &Sensor::FlushHeartRateBuffer),
+			InstanceMethod("flushHeartECGBuffer", &Sensor::FlushHeartECGBuffer),
+			InstanceMethod("flushHeartPPGBuffer", &Sensor::FlushHeartPPGBuffer),
+			InstanceMethod("flushHeartPPIBuffer", &Sensor::FlushHeartPPIBuffer),
+			InstanceMethod("flushHeartAccBuffer", &Sensor::FlushHeartAccBuffer),
+			InstanceMethod("flushHeartHrvBuffer", &Sensor::FlushtHeartHrvBuffer),
 			InstanceMethod("setDataStreamActive", &Sensor::SetDataStreamActive),
 			InstanceMethod("setFilterStreamActive", &Sensor::SetFilterStreamActive),
 			InstanceMethod("stopAllStreams", &Sensor::StopAllStreams),
