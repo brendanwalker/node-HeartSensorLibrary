@@ -158,6 +158,7 @@ public:
 		Napi::Object obj = Napi::Object::New(env);
 		obj.Set("ecgValues", ecgValues);
 		obj.Set("timeInSeconds", frame->timeInSeconds);
+		obj.Set("timeDeltaInSeconds", frame->timeDeltaInSeconds);
 
 		return obj;
 	}
@@ -189,6 +190,7 @@ public:
 		Napi::Object obj = Napi::Object::New(env);
 		obj.Set("ppgSamples", ppgSamples);
 		obj.Set("timeInSeconds", frame->timeInSeconds);
+		obj.Set("timeDeltaInSeconds", frame->timeDeltaInSeconds);
 
 		return obj;
 	}
@@ -252,6 +254,7 @@ public:
 		Napi::Object obj = Napi::Object::New(env);
 		obj.Set("accSamples", accSamples);
 		obj.Set("timeInSeconds", frame->timeInSeconds);
+		obj.Set("timeDeltaInSeconds", frame->timeDeltaInSeconds);
 
 		return obj;
 	}
@@ -273,6 +276,23 @@ public:
 		return obj;
 	}
 
+	Napi::Value GetGSRData(const Napi::CallbackInfo& info)
+	{
+		Napi::Env env = info.Env();
+		HSLGalvanicSkinResponseFrame* frame = HSL_BufferIteratorGetGSRData(&m_iterator);
+		if (frame == nullptr)
+		{
+			Napi::TypeError::New(env, "BufferIterator data is not valid GSRData").ThrowAsJavaScriptException();
+			return env.Null();
+		}
+
+		Napi::Object obj = Napi::Object::New(env);
+		obj.Set("gsrValue", frame->gsrValue);
+		obj.Set("timeInSeconds", frame->timeInSeconds);
+
+		return obj;
+	}
+
 	static void Init(Napi::Env env, Napi::Object exports)
 	{
 		Napi::HandleScope scope(env);
@@ -287,6 +307,7 @@ public:
 			InstanceMethod("getPPIData", &BufferIterator::GetPPIData),
 			InstanceMethod("getAccData", &BufferIterator::GetAccData),
 			InstanceMethod("getHrvData", &BufferIterator::GetHrvData),
+			InstanceMethod("getGSRData", &BufferIterator::GetGSRData),
 			// HSLContactSensorStatus
 			StaticValue("BufferType_HRData", Napi::Number::New(env, HSLBufferType_HRData)),
 			StaticValue("BufferType_ECGData", Napi::Number::New(env, HSLBufferType_ECGData)),
@@ -294,6 +315,7 @@ public:
 			StaticValue("BufferType_PPIData", Napi::Number::New(env, HSLBufferType_PPIData)),
 			StaticValue("BufferType_AccData", Napi::Number::New(env, HSLBufferType_AccData)),
 			StaticValue("BufferType_HRVData", Napi::Number::New(env, HSLBufferType_HRVData)),
+			StaticValue("BufferType_GSRData", Napi::Number::New(env, HSLBufferType_GSRData)),
 		});
 
 		constructor = Napi::Persistent(ctor);
@@ -469,6 +491,14 @@ public:
 		return BufferIterator::CreateNewIterator(info, iter);
 	}
 
+	Napi::Value GetGalvanicSkinResponseBuffer(const Napi::CallbackInfo& info)
+	{
+		HSLSensorID sensor_id = GetSensor()->sensorID;
+		HSLBufferIterator iter = HSL_GetGalvanicSkinResponseBuffer(sensor_id);
+
+		return BufferIterator::CreateNewIterator(info, iter);
+	}
+
 	Napi::Value FlushHeartRateBuffer(const Napi::CallbackInfo& info)
 	{
 		HSLSensorID sensor_id = GetSensor()->sensorID;
@@ -509,13 +539,21 @@ public:
 		return Napi::Boolean::New(info.Env(), bSuccess);
 	}
 
-	Napi::Value FlushtHeartHrvBuffer(const Napi::CallbackInfo& info)
+	Napi::Value FlushHeartHrvBuffer(const Napi::CallbackInfo& info)
 	{
 		REQ_ARGS(1);
 		REQ_INT_ARG(0, filter_type);
 
 		HSLSensorID sensor_id = GetSensor()->sensorID;
 		bool bSuccess= HSL_FlushHeartHrvBuffer(sensor_id, (HSLHeartRateVariabityFilterType)filter_type);
+
+		return Napi::Boolean::New(info.Env(), bSuccess);
+	}
+
+	Napi::Value FlushGalvanicSkinResponseBuffer(const Napi::CallbackInfo& info)
+	{
+		HSLSensorID sensor_id = GetSensor()->sensorID;
+		bool bSuccess = HSL_FlushGalvanicSkinResponseBuffer(sensor_id);
 
 		return Napi::Boolean::New(info.Env(), bSuccess);
 	}
@@ -614,12 +652,14 @@ public:
 			InstanceMethod("getHeartPPIBuffer", &Sensor::GetHeartPPIBuffer),
 			InstanceMethod("getHeartAccBuffer", &Sensor::GetHeartAccBuffer),
 			InstanceMethod("getHeartHrvBuffer", &Sensor::GetHeartHrvBuffer),
+			InstanceMethod("getGalvanicSkinResponseBuffer", &Sensor::GetGalvanicSkinResponseBuffer),
 			InstanceMethod("flushHeartRateBuffer", &Sensor::FlushHeartRateBuffer),
 			InstanceMethod("flushHeartECGBuffer", &Sensor::FlushHeartECGBuffer),
 			InstanceMethod("flushHeartPPGBuffer", &Sensor::FlushHeartPPGBuffer),
 			InstanceMethod("flushHeartPPIBuffer", &Sensor::FlushHeartPPIBuffer),
 			InstanceMethod("flushHeartAccBuffer", &Sensor::FlushHeartAccBuffer),
-			InstanceMethod("flushHeartHrvBuffer", &Sensor::FlushtHeartHrvBuffer),
+			InstanceMethod("flushHeartHrvBuffer", &Sensor::FlushHeartHrvBuffer),
+			InstanceMethod("flushGalvanicSkinResponseBuffer", &Sensor::FlushGalvanicSkinResponseBuffer),
 			InstanceMethod("setDataStreamActive", &Sensor::SetDataStreamActive),
 			InstanceMethod("setFilterStreamActive", &Sensor::SetFilterStreamActive),
 			InstanceMethod("stopAllStreams", &Sensor::StopAllStreams),
@@ -633,8 +673,9 @@ public:
 			StaticValue("StreamFlags_PPGData", Napi::Number::New(env, HSLStreamFlags_PPGData)),
 			StaticValue("StreamFlags_PPIData", Napi::Number::New(env, HSLStreamFlags_PPIData)),
 			StaticValue("StreamFlags_AccData", Napi::Number::New(env, HSLStreamFlags_AccData)),
+			StaticValue("StreamFlags_GSRData", Napi::Number::New(env, HSLStreamFlags_GSRData)),
 			// HSLHeartRateVariabityFilterType
-			StaticValue("HRVFilter_SDNN", Napi::Number::New(env, HRVFilter_SDNN)),
+			StaticValue("HRVFilter_SDANN", Napi::Number::New(env, HRVFilter_SDANN)),
 			StaticValue("HRVFilter_RMSSD", Napi::Number::New(env, HRVFilter_RMSSD)),
 			StaticValue("HRVFilter_SDSD", Napi::Number::New(env, HRVFilter_SDSD)),
 			StaticValue("HRVFilter_NN50", Napi::Number::New(env, HRVFilter_NN50)),

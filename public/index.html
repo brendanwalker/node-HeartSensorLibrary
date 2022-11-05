@@ -2,13 +2,50 @@
 <html>
 
 <head>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <script type="text/javascript">
+    const ppgMaxSamples = 100;
+    var ppgTime = 0.0;
+    var ppgDataSet = {
+      x: [],
+      y: [],
+      type: 'lines+markers',
+      name: 'ppg_data'
+    };
+    var ppgGraphLayout = {
+      title: 'Photoplethysmogram',
+      xaxis: {
+        title: 'Time',
+        showgrid: false,
+        zeroline: false
+      },
+      yaxis: {
+        title: 'PPG',
+        showline: false
+      }
+    };
 
-    var ppgDataSet = [];
+    const gsrMaxSamples = 100;
+    var gsrDataSet = {
+      x: [],
+      y: [],
+      mode: 'lines+markers',
+      name: 'gsr_data'
+    };
+    var gsrGraphLayout = {
+      title: 'Galvanic Skin Response',
+      xaxis: {
+        title: 'Time',
+        showgrid: false,
+        zeroline: false
+      },
+      yaxis: {
+        title: 'milli-volts',
+        showline: false
+      }
+    };
 
     function handleJSONString(jsonString) {
-      var chart = document.getElementById("chart");
-
       const jsonData = JSON.parse(jsonString);
       const sensorID = jsonData['id'];
       const sensorType = jsonData['type'];
@@ -18,54 +55,47 @@
 
         sensorStreamData.forEach(function (streamData) {
           const ppgSamples = streamData['ppgSamples'];
-          var sampleMillis = streamData['timeInSeconds'] * 1000.0;
+          const ppgSampleDelta = streamData['timeDeltaInSeconds'];
 
           ppgSamples.forEach(function (ppgSample) {
-            //const ambient = ppgSample['ambient'];
             const ppgValue0 = ppgSample['ppgValue0'];
-            //const ppgValue1 = ppgSample['ppgValue1'];
-            //const ppgValue2 = ppgSample['ppgValue2'];
 
-            // Add to the data set, remove from the left if it gets wider than the canvas
-            ppgDataSet.push(ppgValue0);
-            if (ppgDataSet.length > (chart.width - 1)) {
-              ppgDataSet.shift();
+            ppgDataSet['y'].push(ppgValue0);
+            ppgDataSet['x'].push(ppgTime)
+            if (ppgDataSet['x'].length > ppgMaxSamples) {
+              ppgDataSet['x'].shift();
+              ppgDataSet['y'].shift();
             }
+
+            ppgTime += ppgSampleDelta;
           });
         });
 
-        redrawDataSet();
+        Plotly.update('ppgGraph', [ppgDataSet], ppgGraphLayout);
       }
-    }
+      else if (sensorType == 'gsr') {
+        sensorStreamData.forEach(function (streamData) {
+          const gsrSample = streamData['gsrValue'];
+          const gsrTime = streamData['timeInSeconds'];
 
-    function redrawDataSet() {
-      var canvas = document.getElementById("chart");
-      var ctx = canvas.getContext("2d");
+          console.log(gsrSample.toString());
 
-      // Erase
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+          gsrDataSet['y'].push(gsrSample);
+          gsrDataSet['x'].push(gsrTime)
+          if (gsrDataSet['x'].length > gsrMaxSamples) {
+            gsrDataSet['x'].shift();
+            gsrDataSet['y'].shift();
+          }
+        });
 
-      // Draw samples
-      ctx.fillStyle = "#000000";
-
-      var minValue = 0;
-      var maxValue = 100;
-      for (var i = 0; i < ppgDataSet.length; i++) {
-        minValue = Math.min(minValue, ppgDataSet[i]);
-        maxValue = Math.max(maxValue, ppgDataSet[i]);
-      }
-
-      for (var i = 0; i < ppgDataSet.length; i++) {
-        var value = ppgDataSet[i];
-        var x = canvas.width - i - 1;
-        var y = canvas.height * (1.0 - (value - minValue) / (maxValue - minValue));
-
-        ctx.fillRect(x, y, 1, 1);
+        Plotly.update('gsrGraph', [gsrDataSet], gsrGraphLayout);
       }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+      Plotly.newPlot('ppgGraph', [ppgDataSet], ppgGraphLayout);
+      Plotly.newPlot('gsrGraph', [gsrDataSet], gsrGraphLayout);
+
       // Run this once after the DOM is loaded
       if (!!window.EventSource) {
         var source = new EventSource('data');
@@ -81,7 +111,8 @@
 </head>
 
 <body>
-  <canvas id="chart" width="300" height="800"></canvas>
+  <div id="ppgGraph" style="width:600px;height:250px;"></div>
+  <div id="gsrGraph" style="width:600px;height:250px;"></div>
 </body>
 
 </html>
